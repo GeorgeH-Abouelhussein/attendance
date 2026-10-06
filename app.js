@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const today = () => new Date().toLocaleDateString('en-CA');
+const wk = d => Math.floor((Date.parse(d + 'T00:00:00Z') / 864e5 - 2) / 7);
 const nowT = () => new Date().toLocaleTimeString('en-GB');
 // ---- IndexedDB ----
 const dbp = new Promise((res, rej) => {
@@ -13,7 +14,7 @@ const put = (s, v, k) => tx(s, 'readwrite', o => o.put(v, k));
 const getMeta = k => tx('meta', 'readonly', o => o.get(k));
 // ---- state ----
 const cfg = { url: localStorage.url || '', dev: localStorage.dev || 'device-' + Math.random().toString(36).slice(2, 5) };
-let bonusMode = false, students = {}, present = new Set(), last = '', lastT = 0;
+let bonusMode = false, bonusSet = new Set(), students = {}, present = new Set(), last = '', lastT = 0;
 async function load() {
   students = Object.fromEntries((await all('students')).map(s => [s.id, s.name]));
   ((await getMeta('regs')) || []).forEach(r => students[r.id] = r.name);
@@ -22,6 +23,8 @@ async function load() {
   for (const s of sc.filter(s => s.synced && s.date < cut)) await tx('scans', 'readwrite', o => o.delete(s.uuid));
   sc = sc.filter(s => !(s.synced && s.date < cut));
   sc.filter(s => s.date === today() && s.type !== 'bonus').forEach(s => present.add(s.id));
+  const bm = await getMeta('bonus'); bonusSet = new Set(bm && bm.week === wk(today()) ? bm.ids : []);
+  sc.filter(s => s.type === 'bonus' && wk(s.date) === wk(today())).forEach(s => bonusSet.add(s.id));
   render(sc);
 }
 function render(sc) {
@@ -36,6 +39,8 @@ async function onScan(text) {
   const name = students[id];
   if (bonusMode) {
     if (!name) return show('❓ غير معروف: ' + id, 'err');
+    if (bonusSet.has(id)) return show('⚠ ' + name + ' خد البونص الأسبوع ده', 'warn');
+    bonusSet.add(id);
     await put('scans', { uuid: crypto.randomUUID(), id, type: 'bonus', date: today(), time: nowT(), ts: Date.now(), device: cfg.dev, synced: false });
     show('⭐ +1 بونص لـ ' + name, 'ok'); load(); return sync();
   }
@@ -59,6 +64,7 @@ async function sync() {
     const d = await (await fetch(cfg.url + '?date=' + today())).json();
     if (d.ok) {
       if (d.sheetUrl) localStorage.sheet = d.sheetUrl;
+      if (d.bonusIds) await put('meta', { week: wk(d.date), ids: d.bonusIds }, 'bonus');
       await tx('students', 'readwrite', o => { o.clear(); d.students.forEach(s => o.put(s)); });
       await put('meta', { date: d.date, ids: d.present }, 'present');
     }

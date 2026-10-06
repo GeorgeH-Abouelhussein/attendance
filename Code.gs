@@ -30,6 +30,17 @@ function ensureCol(sh, head, date) {
   return c;
 }
 
+// الأسبوع بيبدأ من السبت. بيرجّع رقم الأسبوع للتاريخ yyyy-MM-dd
+const wk = d => Math.floor((Date.parse(d + 'T00:00:00Z') / 864e5 - 2) / 7);
+// كل البونصات اللي اتسجلت قبل كده على شكل 'ID|رقم الأسبوع'
+function bonusKeys() {
+  const log = sheet(LOG), n = log.getLastRow(), set = new Set();
+  if (n) log.getRange(1, 1, n, 6).getValues().forEach(r => {
+    const res = String(r[5]);
+    if (res.indexOf('bonus') === 0 && res.indexOf('already') < 0) set.add(String(r[1]) + '|' + wk(hdr(r[2])));
+  });
+  return set;
+}
 function progress(id) {
   id = String(id || '').trim().toUpperCase();
   const v = sheet(SHEET).getDataRange().getValues(), head = v[0].map(hdr);
@@ -50,7 +61,8 @@ function doGet(e) {
     students.push({ id: String(r[1]), name: String(r[0]) });
     if (col > 3 && r[col] !== '') present.push(String(r[1]));
   });
-  return out({ ok: true, students, date, present, sheetUrl: SpreadsheetApp.getActive().getUrl() });
+  const w = '|' + wk(date), bonusIds = [...bonusKeys()].filter(k => k.endsWith(w)).map(k => k.split('|')[0]);
+  return out({ ok: true, students, date, present, bonusIds, sheetUrl: SpreadsheetApp.getActive().getUrl() });
 }
 
 function doPost(e) {
@@ -65,19 +77,23 @@ function doPost(e) {
     const rowOf = {}; v.forEach((r, i) => { if (i) rowOf[String(r[1])] = i + 1; });
     regs.forEach(r => { if (!rowOf[r.id]) { sh.appendRow([r.name, r.id, r.gender || '', 0]); rowOf[r.id] = sh.getLastRow(); } });
     const seen = new Set(log.getLastRow() ? log.getRange(1, 1, log.getLastRow(), 1).getValues().map(r => r[0]) : []);
-    const results = {}, logRows = [];
+    const results = {}, logRows = []; let bk = null;
     scans.forEach(s => {
       let res;
       if (seen.has(s.uuid)) res = 'dup';
       else if (!rowOf[s.id]) { unk.appendRow([s.id, s.date, s.time, s.device]); res = 'unknown'; }
-      else if (s.type === 'bonus') { const c = sh.getRange(rowOf[s.id], 4); c.setValue((Number(c.getValue()) || 0) + 1); res = 'bonus'; }
+      else if (s.type === 'bonus') {
+        bk = bk || bonusKeys(); const key = s.id + '|' + wk(s.date);
+        if (bk.has(key)) res = 'bonus-already';
+        else { const c = sh.getRange(rowOf[s.id], 4); c.setValue((Number(c.getValue()) || 0) + 1); bk.add(key); res = 'bonus'; }
+      }
       else {
         const cell = sh.getRange(rowOf[s.id], ensureCol(sh, head, s.date));
         if (cell.getValue() !== '') res = 'already';
         else { cell.setValue('✓'); res = 'ok'; }
       }
       results[s.uuid] = res; seen.add(s.uuid);
-      logRows.push([s.uuid, s.id, s.date, s.time, s.device, res + (s.type === 'bonus' ? ' (bonus)' : '')]);
+      logRows.push([s.uuid, s.id, s.date, s.time, s.device, res]);
     });
     if (logRows.length) log.getRange(log.getLastRow() + 1, 1, logRows.length, 6).setValues(logRows);
     return out({ ok: true, results });
