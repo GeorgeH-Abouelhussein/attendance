@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مولّد الكروت</title>
+<style>body{font-family:system-ui;margin:16px}textarea{width:100%;height:140px}button{padding:10px 16px;font-size:16px}
+#cards{display:grid;grid-template-columns:repeat(auto-fill,170px);gap:10px;margin-top:12px}#cards canvas{width:170px;border:1px solid #ccc}</style></head><body>
+<p>الصق سطر لكل طالب: <code>ID,الاسم</code> أو الاسم بس (هيتعمل ID تلقائي S001...)</p>
+<textarea id="t"></textarea><br><button onclick="go()">ولّد</button> <button id="zb" onclick="zip()" disabled>تحميل الكل ZIP</button> <span id="msg"></span>
+<p>انسخ الجدول ده في ورقة Students (الاسم ثم ID):</p><pre id="tbl"></pre><div id="cards"></div>
+<script src="lib/qrcode.js"></script><script src="lib/jszip.min.js"></script><script src="card-config.js"></script><script src="card.js"></script><script>
+let P=[];
+async function go(){P=[];cards.innerHTML='';let o='';
+t.value.split('\n').map(x=>x.trim()).filter(Boolean).forEach((l,i)=>{let [id,...n]=l.split(',');if(!n.length){n=[id];id='S'+String(i+1).padStart(3,'0')}P.push({id:id.trim(),name:n.join(',').trim()});o+=P[i].name+'\t'+P[i].id+'\n'});
+tbl.textContent=o;
+for(const p of P){const c=document.createElement('canvas');await drawCard(c,p);p.c=c;cards.appendChild(c)}
+zb.disabled=!P.length}
+async function zip(){const z=new JSZip(),used={};msg.textContent='جاري التجهيز...';
+for(const p of P){let f=p.name.replace(/[\\/:*?"<>|]/g,'').trim()||p.id;if(used[f])f+=' - '+p.id;used[f]=1;
+const b=await new Promise(r=>p.c.toBlob(r,'image/png'));z.file(f+'.png',b)}
+const a=document.createElement('a');a.href=URL.createObjectURL(await z.generateAsync({type:'blob'}));a.download='cards.zip';a.click();msg.textContent='تم'}
+</script></body></html>

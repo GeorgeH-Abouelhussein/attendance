@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><title>حضور QR</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:#f3f4f6;color:#111}
+header{background:#0f766e;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+#reader{width:100%;max-width:420px;margin:10px auto}
+#banner{margin:10px;padding:18px;border-radius:12px;text-align:center;font-size:22px;font-weight:700;background:#e5e7eb;min-height:30px}
+.ok{background:#bbf7d0!important}.warn{background:#fde68a!important}.err{background:#fecaca!important}
+.bar{display:flex;gap:8px;margin:10px;flex-wrap:wrap}
+button{flex:1;padding:12px;font-size:16px;border:0;border-radius:10px;background:#0f766e;color:#fff}
+button.sec{background:#475569}
+#recent{margin:10px;padding:0;list-style:none}#recent li{background:#fff;padding:8px 12px;margin-bottom:6px;border-radius:8px}
+dialog{border:0;border-radius:12px;width:85%;max-width:380px}input{width:100%;box-sizing:border-box;padding:10px;margin:6px 0 12px;font-size:16px}
+</style></head><body>
+<header><b>حضور QR</b><span id="status"></span></header>
+<div id="reader"></div>
+<div id="banner">وجّه الكاميرا على الكود</div>
+<div class="bar"><button id="sync">مزامنة</button><button class="sec" id="nw">+ طالب جديد</button><button class="sec" id="csv">CSV</button><button class="sec" id="cfg">إعدادات</button></div>
+<ul id="recent"></ul>
+<dialog id="dlg"><label>رابط الـ Web App</label><input id="url" dir="ltr"><label>اسم الجهاز</label><input id="dev"><button id="save">حفظ</button></dialog>
+<dialog id="ndlg"><label>اسم الطالب الجديد</label><input id="nname"><button id="nmk">إنشاء QR</button><canvas id="qrc" style="display:none;width:100%;margin-top:10px"></canvas><div class="bar"><button id="nsh" style="display:none">مشاركة / حفظ</button><button class="sec" id="ncl">إغلاق</button></div></dialog>
+<script src="lib/qrcode.js"></script><script src="card-config.js"></script><script src="card.js"></script><script src="lib/html5-qrcode.min.js"></script><script src="app.js"></script>
+</body></html>
