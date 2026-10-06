@@ -13,24 +13,32 @@ const put = (s, v, k) => tx(s, 'readwrite', o => o.put(v, k));
 const getMeta = k => tx('meta', 'readonly', o => o.get(k));
 // ---- state ----
 const cfg = { url: localStorage.url || '', dev: localStorage.dev || 'device-' + Math.random().toString(36).slice(2, 5) };
-let students = {}, present = new Set(), last = '', lastT = 0;
+let bonusMode = false, students = {}, present = new Set(), last = '', lastT = 0;
 async function load() {
   students = Object.fromEntries((await all('students')).map(s => [s.id, s.name]));
   ((await getMeta('regs')) || []).forEach(r => students[r.id] = r.name);
   const p = await getMeta('present'); present = new Set(p && p.date === today() ? p.ids : []);
-  const sc = await all('scans'); sc.filter(s => s.date === today()).forEach(s => present.add(s.id));
+  let sc = await all('scans'); const cut = new Date(Date.now() - 7 * 864e5).toLocaleDateString('en-CA');
+  for (const s of sc.filter(s => s.synced && s.date < cut)) await tx('scans', 'readwrite', o => o.delete(s.uuid));
+  sc = sc.filter(s => !(s.synced && s.date < cut));
+  sc.filter(s => s.date === today() && s.type !== 'bonus').forEach(s => present.add(s.id));
   render(sc);
 }
 function render(sc) {
   const pend = sc.filter(s => !s.synced).length;
   $('status').textContent = (navigator.onLine ? '🟢' : '🔴') + ' معلّق: ' + pend;
-  $('recent').innerHTML = sc.sort((a, b) => b.ts - a.ts).slice(0, 6).map(s => `<li>${s.unknown ? '❓' : '✓'} ${students[s.id] || s.id} <small>${s.time}</small> ${s.synced ? '☁️' : ''}</li>`).join('');
+  $('recent').innerHTML = sc.sort((a, b) => b.ts - a.ts).slice(0, 6).map(s => `<li>${s.unknown ? '❓' : s.type === 'bonus' ? '⭐' : '✓'} ${students[s.id] || s.id} <small>${s.time}</small> ${s.synced ? '☁️' : ''}</li>`).join('');
 }
 function show(msg, cls) { const b = $('banner'); b.textContent = msg; b.className = cls; if (navigator.vibrate) navigator.vibrate(cls === 'ok' ? 80 : [60, 60, 60]); }
 async function onScan(text) {
   const id = text.trim();
   if (id === last && Date.now() - lastT < 3000) return; last = id; lastT = Date.now();
   const name = students[id];
+  if (bonusMode) {
+    if (!name) return show('❓ غير معروف: ' + id, 'err');
+    await put('scans', { uuid: crypto.randomUUID(), id, type: 'bonus', date: today(), time: nowT(), ts: Date.now(), device: cfg.dev, synced: false });
+    show('⭐ +1 بونص لـ ' + name, 'ok'); load(); return sync();
+  }
   if (present.has(id)) return show('⚠ ' + (name || id) + ' اتسجل قبل كده', 'warn');
   present.add(id);
   await put('scans', { uuid: crypto.randomUUID(), id, date: today(), time: nowT(), ts: Date.now(), device: cfg.dev, unknown: !name, synced: false });
@@ -50,6 +58,7 @@ async function sync() {
     }
     const d = await (await fetch(cfg.url + '?date=' + today())).json();
     if (d.ok) {
+      if (d.sheetUrl) localStorage.sheet = d.sheetUrl;
       await tx('students', 'readwrite', o => { o.clear(); d.students.forEach(s => o.put(s)); });
       await put('meta', { date: d.date, ids: d.present }, 'present');
     }
@@ -57,7 +66,7 @@ async function sync() {
   syncing = false; load();
 }
 async function exportCsv() {
-  const rows = [['id', 'name', 'date', 'time', 'device', 'synced'], ...(await all('scans')).map(s => [s.id, students[s.id] || '', s.date, s.time, s.device, s.synced])];
+  const rows = [['id', 'name', 'date', 'time', 'device', 'synced', 'type'], ...(await all('scans')).map(s => [s.id, students[s.id] || '', s.date, s.time, s.device, s.synced, s.type || 'attendance'])];
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }));
   a.download = 'scans-' + today() + '.csv'; a.click();
@@ -69,7 +78,7 @@ $('ncl').onclick = () => $('ndlg').close();
 $('nmk').onclick = async () => {
   const name = $('nname').value.trim(); if (!name) return;
   const id = 'N' + Date.now().toString(36).toUpperCase().slice(-5) + Math.random().toString(36).slice(2, 4).toUpperCase();
-  const regs = (await getMeta('regs')) || []; regs.push({ id, name }); await put('meta', regs, 'regs');
+  const regs = (await getMeta('regs')) || []; regs.push({ id, name, gender: $('ngen').value }); await put('meta', regs, 'regs');
   cur = { id, name }; await load(); drawQR(id, name); sync();
 };
 function drawQR(id, name) { drawCard($('qrc'), { id, name }).then(() => { $('qrc').style.display = $('nsh').style.display = 'block'; }); }
@@ -78,11 +87,13 @@ $('nsh').onclick = () => $('qrc').toBlob(async b => {
   if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f] }); } catch (e) {} }
   else { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = f.name; a.click(); }
 });
+$('bn').onclick = () => { bonusMode = !bonusMode; $('bn').textContent = bonusMode ? 'إلغاء البونص' : '⭐ بونص'; $('bn').style.background = bonusMode ? '#d97706' : ''; show(bonusMode ? '⭐ وضع البونص شغال' : 'رجعنا لوضع الحضور', bonusMode ? 'warn' : ''); };
 // ---- init ----
-$('sync').onclick = sync; $('csv').onclick = exportCsv;
+$('shbtn').onclick = () => localStorage.sheet ? window.open(localStorage.sheet, '_blank') : show('لينك الشيت لسه ما اتحملش، اتأكد إنك أونلاين وجرّب بعد ثواني', 'warn');
+document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 $('cfg').onclick = () => { $('url').value = cfg.url; $('dev').value = cfg.dev; $('dlg').showModal(); };
 $('save').onclick = () => { cfg.url = localStorage.url = $('url').value.trim(); cfg.dev = localStorage.dev = $('dev').value.trim(); $('dlg').close(); sync(); };
-addEventListener('online', sync); addEventListener('offline', load); setInterval(sync, 60000);
+addEventListener('online', sync); addEventListener('offline', load); setInterval(sync, 30000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 new Html5Qrcode('reader').start({ facingMode: 'environment' }, { fps: 10, qrbox: 240 }, onScan).catch(e => show('الكاميرا مش شغالة: ' + e, 'err'));
 load().then(() => cfg.url ? sync() : $('cfg').click());

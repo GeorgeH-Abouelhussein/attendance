@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f766e">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><title>حضور QR</title>
 <style>
@@ -16,9 +16,9 @@ dialog{border:0;border-radius:12px;width:85%;max-width:380px}input{width:100%;bo
 <header><b>حضور QR</b><span id="status"></span></header>
 <div id="reader"></div>
 <div id="banner">وجّه الكاميرا على الكود</div>
-<div class="bar"><button id="sync">مزامنة</button><button class="sec" id="nw">+ طالب جديد</button><button class="sec" id="csv">CSV</button><button class="sec" id="cfg">إعدادات</button></div>
+<div class="bar"><button class="sec" id="bn">⭐ بونص</button><button class="sec" id="nw">+ طالب جديد</button><button class="sec" id="shbtn">📄 الشيت</button><button class="sec" id="cfg">إعدادات</button></div>
 <ul id="recent"></ul>
 <dialog id="dlg"><label>رابط الـ Web App</label><input id="url" dir="ltr"><label>اسم الجهاز</label><input id="dev"><button id="save">حفظ</button></dialog>
-<dialog id="ndlg"><label>اسم الطالب الجديد</label><input id="nname"><button id="nmk">إنشاء QR</button><canvas id="qrc" style="display:none;width:100%;margin-top:10px"></canvas><div class="bar"><button id="nsh" style="display:none">مشاركة / حفظ</button><button class="sec" id="ncl">إغلاق</button></div></dialog>
+<dialog id="ndlg"><label>اسم الطالب الجديد</label><input id="nname" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select id="ngen" style="width:100%;padding:10px;font-size:16px;margin-bottom:10px"><option>ولد</option><option>بنت</option></select><button id="nmk">إنشاء QR</button><canvas id="qrc" style="display:none;width:100%;margin-top:10px"></canvas><div class="bar"><button id="nsh" style="display:none">مشاركة / حفظ</button><button class="sec" id="ncl">إغلاق</button></div></dialog>
 <script src="lib/qrcode.js"></script><script src="card-config.js"></script><script src="card.js"></script><script src="lib/html5-qrcode.min.js"></script><script src="app.js"></script>
 </body></html>
