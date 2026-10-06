@@ -36,7 +36,7 @@ function progress(id) {
   const cols = []; head.forEach((h, i) => { if (/^\d{4}-\d{2}-\d{2}$/.test(h)) cols.push(i); });
   const r = v.find((row, i) => i && String(row[1]).toUpperCase() === id);
   if (!r) return { ok: false, error: 'notfound' };
-  return { ok: true, first: String(r[0]).split(' ')[0], attended: cols.filter(i => r[i] !== '').length, total: cols.length, bonus: Number(r[3]) || 0 };
+  return { ok: true, name: String(r[0]), first: String(r[0]).split(' ')[0], attended: cols.filter(i => r[i] !== '').length, total: cols.length, bonus: Number(r[3]) || 0 };
 }
 
 function doGet(e) {
