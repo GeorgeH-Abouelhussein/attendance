@@ -3,11 +3,11 @@
 #cards{display:grid;grid-template-columns:repeat(auto-fill,170px);gap:10px;margin-top:12px}#cards canvas{width:170px;border:1px solid #ccc}</style></head><body>
 <p>الصق سطر لكل طالب: <code>ID,الاسم</code> أو الاسم بس (هيتعمل ID تلقائي S001...)</p>
 <textarea id="t"></textarea><br><button onclick="go()">ولّد</button> <button id="zb" onclick="zip()" disabled>تحميل الكل ZIP</button> <span id="msg"></span>
-<p>انسخ الجدول ده في ورقة Students (الاسم ثم ID):</p><pre id="tbl"></pre><div id="cards"></div>
+<p>الـ IDs بس، بنفس ترتيب الأسماء اللي لصقتها. ادوس "نسخ الـ IDs" والصقها في الشيت في أول خلية تحت ID (B2):</p><button onclick="navigator.clipboard.writeText(tbl.textContent).then(()=>msg.textContent='اتنسخت')">نسخ الـ IDs</button><pre id="tbl" dir="ltr"></pre><div id="cards"></div>
 <script src="lib/qrcode.js"></script><script src="lib/jszip.min.js"></script><script src="card-config.js"></script><script src="card.js"></script><script>
 let P=[];
 async function go(){P=[];cards.innerHTML='';let o='';
-t.value.split('\n').map(x=>x.trim()).filter(Boolean).forEach((l,i)=>{let [id,...n]=l.split(',');if(!n.length){n=[id];id='S'+String(i+1).padStart(3,'0')}P.push({id:id.trim(),name:n.join(',').trim()});o+=P[i].name+'\t'+P[i].id+'\n'});
+t.value.split('\n').map(x=>x.trim()).filter(Boolean).forEach((l,i)=>{let [id,...n]=l.split(',');if(!n.length){n=[id];id='S'+String(i+1).padStart(3,'0')}P.push({id:id.trim(),name:n.join(',').trim()});o+=P[i].id+'\n'});
 tbl.textContent=o;
 for(const p of P){const c=document.createElement('canvas');await drawCard(c,p);p.c=c;cards.appendChild(c)}
 zb.disabled=!P.length}
